@@ -22,8 +22,6 @@ setopt GLOB_COMPLETE            # Generate matches from globbing
 setopt LIST_PACKED              # Make completion lists more compact
 
 # ===== EXTERNAL TOOLS =====
-# rbenv (Ruby version manager)
-command -v rbenv >/dev/null 2>&1 && eval "$(rbenv init - --no-rehash)"
 
 # slimzsh
 [ -f "$HOME/.slimzsh/slim.zsh" ] && source "$HOME/.slimzsh/slim.zsh"
@@ -42,3 +40,6 @@ command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
 # Load local zsh configuration if it exists
 # This allows for machine-specific settings without modifying the main dotfiles
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
+
+# mise - dev tools version manager
+eval "$(mise activate zsh)"
