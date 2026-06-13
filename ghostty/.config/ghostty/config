@@ -1,6 +1,9 @@
 shell-integration = zsh
+shell-integration-features = ssh-terminfo,ssh-env
 font-family = JetBrains Mono
 theme = tokyonight
+cursor-style = underline
+cursor-style-blink = true
 mouse-hide-while-typing = true
 scrollback-limit = 1000000
 
