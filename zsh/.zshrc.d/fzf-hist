@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""
+Helper for the zsh fzf-history-widget override in .zshrc.
+
+Reads/writes zsh's EXTENDED_HISTORY file format directly (": <ts>:<elapsed>;<cmd>",
+with "\\<newline>" continuations for multi-line commands) since zsh has no public
+API to delete a single entry from the live in-memory history -- only the on-disk
+HISTFILE can be edited directly.
+
+Subcommands:
+  prep <histfile> <entries_file>   parse+dedup histfile, write raw command texts
+                                    (NUL-separated, most-recent-first) to entries_file,
+                                    print "IDX<TAB>preview\\0" records to stdout for fzf
+  show <entries_file> <idx>        print the full raw command text for IDX
+  delete <histfile> <entries_file> <idx...>
+                                    remove entries matching the given IDXs' command
+                                    text from histfile
+"""
+import os
+import re
+import sys
+
+HEADER_RE = re.compile(r"^: \d+:\d+;")
+
+
+def parse_entries(text):
+    """Split extended-history file content into raw per-entry strings."""
+    lines = text.splitlines(keepends=True)
+    entries = []
+    cur = ""
+    for line in lines:
+        cur += line
+        stripped = line.rstrip("\n")
+        if stripped.endswith("\\") and not stripped.endswith("\\\\"):
+            continue
+        entries.append(cur)
+        cur = ""
+    if cur:
+        entries.append(cur)
+    return entries
+
+
+def command_text(raw_entry):
+    """Reconstruct the literal command text (real newlines, no header) from a raw entry."""
+    m = HEADER_RE.match(raw_entry)
+    body = raw_entry[m.end():] if m else raw_entry
+    body = body.replace("\\\n", "\n")
+    if body.endswith("\n"):
+        body = body[:-1]
+    return body
+
+
+def read_histfile(path):
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        return f.read()
+
+
+def cmd_prep(histfile, entries_file):
+    text = read_histfile(histfile)
+    raw_entries = parse_entries(text)
+
+    seen = set()
+    unique_cmds = []
+    for raw in reversed(raw_entries):  # most recent first
+        cmd = command_text(raw)
+        if not cmd or cmd in seen:
+            continue
+        seen.add(cmd)
+        unique_cmds.append(cmd)
+
+    with open(entries_file, "w", encoding="utf-8") as f:
+        f.write("\0".join(unique_cmds))
+
+    out = sys.stdout.buffer
+    for idx, cmd in enumerate(unique_cmds):
+        first_line, _, rest = cmd.partition("\n")
+        preview = first_line if not rest else f"{first_line}  [+{cmd.count(chr(10))} lines]"
+        out.write(f"{idx}\t{preview}\0".encode("utf-8", errors="replace"))
+
+
+def load_entries(entries_file):
+    with open(entries_file, "r", encoding="utf-8") as f:
+        content = f.read()
+    return content.split("\0") if content else []
+
+
+def cmd_show(entries_file, idx):
+    entries = load_entries(entries_file)
+    i = int(idx)
+    if 0 <= i < len(entries):
+        sys.stdout.write(entries[i])
+
+
+def cmd_delete(histfile, entries_file, idxs):
+    entries = load_entries(entries_file)
+    targets = set()
+    for idx in idxs:
+        i = int(idx)
+        if 0 <= i < len(entries):
+            targets.add(entries[i])
+    if not targets:
+        return
+
+    st = os.stat(histfile)
+    text = read_histfile(histfile)
+    raw_entries = parse_entries(text)
+    kept = [raw for raw in raw_entries if command_text(raw) not in targets]
+
+    with open(histfile, "w", encoding="utf-8") as f:
+        for raw in kept:
+            f.write(raw)
+    os.chmod(histfile, st.st_mode)
+
+
+def main(argv):
+    if len(argv) < 2:
+        sys.exit(f"usage: {argv[0]} {{prep|show|delete}} ...")
+    action = argv[1]
+    if action == "prep" and len(argv) == 4:
+        cmd_prep(argv[2], argv[3])
+    elif action == "show" and len(argv) == 4:
+        cmd_show(argv[2], argv[3])
+    elif action == "delete" and len(argv) >= 4:
+        cmd_delete(argv[2], argv[3], argv[4:])
+    else:
+        sys.exit(f"usage: {argv[0]} {{prep <histfile> <entries_file>|show <entries_file> <idx>|delete <histfile> <entries_file> <idx...>}}")
+
+
+if __name__ == "__main__":
+    try:
+        main(sys.argv)
+    except BrokenPipeError:
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+        sys.exit(0)

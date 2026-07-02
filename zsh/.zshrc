@@ -1,37 +1,11 @@
-# ===== ENVIRONMENT =====
-export LC_ALL=en_US.UTF-8
-export LC_CTYPE=en_US.UTF-8
-
-# ===== PATH MANAGEMENT =====
-# Personal bin directory
-export PATH="$HOME/.bin:$PATH"
-export PATH="$HOME/.local/bin:$PATH"  # required for Claude Code CLI
-
-# Homebrew (Apple Silicon)
-export PATH="/opt/homebrew/bin:$PATH"
-
-# ===== SHELL OPTIONS =====
-
-# History settings 
-setopt HIST_FIND_NO_DUPS        # Don't display duplicates when searching
-setopt HIST_SAVE_NO_DUPS        # Don't save duplicates to history file
-setopt SHARE_HISTORY            # Share history between all sessions
-
-# Completion improvements
-setopt COMPLETE_ALIASES         # Complete aliases
-setopt GLOB_COMPLETE            # Generate matches from globbing
-setopt LIST_PACKED              # Make completion lists more compact
-
-# ===== EXTERNAL TOOLS =====
-
-# slimzsh
-[ -f "$HOME/.slimzsh/slim.zsh" ] && source "$HOME/.slimzsh/slim.zsh"
-
-# fzf - fuzzy matching
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-
-# zoxide - smarter cd command
-command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"
+# ===== RC FILES =====
+# Hand-written config, split up and sourced in dependency order.
+# One-liners are kept inline here rather than split into their own file.
+[ -f ~/.zshrc.d/path.zsh ] && source ~/.zshrc.d/path.zsh        # must come first, other files rely on PATH (e.g. Homebrew bin) being set
+[ -f ~/.zshrc.d/options.zsh ] && source ~/.zshrc.d/options.zsh  # shell setopts
+[ -f "$HOME/.slimzsh/slim.zsh" ] && source "$HOME/.slimzsh/slim.zsh"  # must come before fzf, which intentionally overrides some of its bindings
+[ -f ~/.zshrc.d/fzf.zsh ] && source ~/.zshrc.d/fzf.zsh          # fuzzy matching, file/history/cd pickers
+command -v zoxide >/dev/null 2>&1 && eval "$(zoxide init zsh)"  # smarter cd command
 
 # ===== ALIASES =====
 # Load aliases from separate file
