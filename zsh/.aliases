@@ -3,17 +3,23 @@
 # Adding complementary aliases here
 
 # ===== FILE OPERATIONS =====
-# List files (macOS specific with colors)
-alias ls='ls -G'     # macOS specific - colors
-alias ll='ls -hl'    # Long format with human readable sizes
-alias la='ls -a'     # Show hidden files
-alias lla='ls -lah'  # Long format, all files, human readable
-alias l='ls -CF'     # Compact format
+# eza (better ls)
+alias ls='eza --icons'
+alias ll='eza -lh --icons --git'
+alias la='eza -lah --icons --git'
+alias tree='eza --tree --icons'
+compdef eza=ls  # reuse ls completions for eza
 
+# bat (better cat)
+alias cat='bat'
+
+# ripgrep (better grep)
+alias grep='rg --color=auto'
 
 # General utilities
 alias p8="ping 8.8.8.8"  # Quick connectivity test
 alias reload='source ~/.zshrc'
+alias -- -='cd -'  # -- prevents - being parsed as a flag; cd - jumps to previous directory
 
 # ===== DEVELOPMENT =====
 # Editors
@@ -44,4 +50,4 @@ alias gl='git pull'
 alias glog='git log --oneline --graph --decorate'
 alias gp='git push'
 alias gs='git status'
-alias gwc='git whatchanged -p --abbrev-commit --pretty=medium'
+alias gwc='git log -p --abbrev-commit --pretty=medium --raw --no-merges'  # git whatchanged is deprecated; this replicates it via git log
